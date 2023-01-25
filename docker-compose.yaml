@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15
+    container_name: pg
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=postdb
+      - POSTGRES_USER=dbuser
+      - POSTGRES_PASSWORD=dbpass

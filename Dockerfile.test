@@ -1,0 +1,15 @@
+FROM golang:1.19.5-alpine3.17 AS compiler
+RUN apk --update --no-cache add git
+WORKDIR /app
+
+ADD go.mod go.sum ./
+RUN go mod download
+
+ADD . .
+
+CMD while ! nc -z $DB_HOST $DB_PORT; do sleep 1; done; \
+    CGO_ENABLED=0 go test -tags=accept ./accept_test/... \
+    -coverprofile=test.coverage.tmp \
+    -coverpkg=$(go list ./... | paste -sd ',' -) ./... \
+    && cat test.coverage.tmp | grep -v '_test.go' > test.coverage && \
+    go tool cover -func test.coverage.tmp

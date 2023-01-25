@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: accept_test
+    env_file:
+      - local.env
+    environment:
+      - DB_HOST=postgres
+    links:
+      - postgres
