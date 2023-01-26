@@ -3,6 +3,7 @@ package rest
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -17,6 +18,7 @@ type ErrorResponse struct {
 }
 
 func WriteErrorResponse(ctx context.Context, w http.ResponseWriter, message string, statusCode int) {
+	log.Println(message)
 	WriteResponse(w, ErrorResponse{
 		Message: message,
 	}, statusCode)

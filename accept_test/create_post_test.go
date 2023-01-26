@@ -7,22 +7,27 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pmorelli92/how-i-test-microservices-2023/accept_test/helpers"
+	"github.com/pmorelli92/how-i-test-microservices-2023/app"
 )
 
 type testCreatePost struct {
-	db      *pgxpool.Pool
-	userID  string
-	content string
+	db          *pgxpool.Pool
+	HTTPAddress string
+	userID      string
+	content     string
+}
+
+type postRs struct {
+	ID string `json:"id"`
 }
 
 type testCreatePostResult struct {
-	body       []byte
+	response   postRs
 	statusCode int
 }
 
@@ -31,18 +36,18 @@ func (t testCreatePost) userExists(ctx context.Context) error {
 	return err
 }
 
-// func (t testCreatePost) userDoesNotExists(ctx context.Context) error {
-// 	return nil
-// }
+func (t testCreatePost) userDoesNotExists(ctx context.Context) error {
+	return nil
+}
 
 func (t testCreatePost) userCreatesPost(ctx context.Context) (testCreatePostResult, error) {
-	type post struct {
+	type postRq struct {
 		UserID  string `json:"userId"`
 		Content string `json:"content"`
 	}
 
-	URL := fmt.Sprintf("http://%s/post", os.Getenv("HTTP_ADDRESS"))
-	rqBody := post{
+	URL := fmt.Sprintf("http://%s/post", t.HTTPAddress)
+	rqBody := postRq{
 		UserID:  t.userID,
 		Content: t.content,
 	}
@@ -67,8 +72,13 @@ func (t testCreatePost) userCreatesPost(ctx context.Context) (testCreatePostResu
 		return testCreatePostResult{}, err
 	}
 
+	var postRs postRs
+	if err := json.Unmarshal(rsBody, &postRs); err != nil {
+		return testCreatePostResult{}, err
+	}
+
 	return testCreatePostResult{
-		body:       rsBody,
+		response:   postRs,
 		statusCode: rs.StatusCode,
 	}, nil
 }
@@ -80,19 +90,17 @@ func (t testCreatePost) responseShouldBeStatus201(ctx context.Context, result te
 	return nil
 }
 
+func (t testCreatePost) responseShouldBeStatus400(ctx context.Context, result testCreatePostResult) error {
+	if result.statusCode != http.StatusBadRequest {
+		return fmt.Errorf("expected status 400, actual: %d", result.statusCode)
+	}
+	return nil
+}
+
 func (t testCreatePost) postShouldExistsOnDatabase(ctx context.Context, result testCreatePostResult) error {
-	type post struct {
-		ID string `json:"id"`
-	}
-
-	var p post
-	if err := json.Unmarshal(result.body, &p); err != nil {
-		return err
-	}
-
 	row := t.db.QueryRow(
 		ctx,
-		`SELECT content FROM posts WHERE id = $1`, p.ID)
+		`SELECT content FROM posts WHERE id = $1`, result.response.ID)
 
 	var content string
 	if err := row.Scan(&content); err != nil {
@@ -106,34 +114,70 @@ func (t testCreatePost) postShouldExistsOnDatabase(ctx context.Context, result t
 	return nil
 }
 
-func databaseConn() string {
-	return fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s",
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASS"),
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_NAME"),
-	)
+func (t testCreatePost) postIDShouldBeEmpty(ctx context.Context, result testCreatePostResult) error {
+	if result.response.ID != "" {
+		return fmt.Errorf("expected post ID to be empty")
+	}
+	return nil
 }
 
 func TestCreatePost(t *testing.T) {
 	ctx := context.TODO()
-	db, err := pgxpool.New(ctx, databaseConn())
+	cfg, err := app.NewConfig()
+	if err != nil {
+		t.Fatal("could not get config")
+	}
+
+	db, err := pgxpool.New(ctx, cfg.ConnectDatabaseDSN())
 	if err != nil {
 		t.Fatal("could not connect to database")
 	}
 
-	arg := testCreatePost{
-		db:      db,
-		userID:  uuid.NewString(),
-		content: "some text without blacklist",
-	}
+	t.Run("Create post without blacklist terms", func(t *testing.T) {
+		arg := testCreatePost{
+			db:          db,
+			HTTPAddress: cfg.HTTPAddress,
+			userID:      uuid.NewString(),
+			content:     "some text without blacklist",
+		}
 
-	helpers.NewCase[testCreatePostResult](ctx, t).
-		Given(arg.userExists).
-		When(arg.userCreatesPost).
-		Then(arg.responseShouldBeStatus201).
-		Then(arg.postShouldExistsOnDatabase).
-		Run()
+		helpers.NewCase[testCreatePostResult](ctx, t).
+			Given(arg.userExists).
+			When(arg.userCreatesPost).
+			Then(arg.responseShouldBeStatus201).
+			Then(arg.postShouldExistsOnDatabase).
+			Run()
+	})
+
+	t.Run("Create post with blacklist terms", func(t *testing.T) {
+		arg := testCreatePost{
+			db:          db,
+			HTTPAddress: cfg.HTTPAddress,
+			userID:      uuid.NewString(),
+			content:     "some text with foo",
+		}
+
+		helpers.NewCase[testCreatePostResult](ctx, t).
+			Given(arg.userExists).
+			When(arg.userCreatesPost).
+			Then(arg.responseShouldBeStatus400).
+			Then(arg.postIDShouldBeEmpty).
+			Run()
+	})
+
+	t.Run("Create post for non existing user", func(t *testing.T) {
+		arg := testCreatePost{
+			db:          db,
+			HTTPAddress: cfg.HTTPAddress,
+			userID:      uuid.NewString(),
+			content:     "some text for non existing user",
+		}
+
+		helpers.NewCase[testCreatePostResult](ctx, t).
+			Given(arg.userDoesNotExists).
+			When(arg.userCreatesPost).
+			Then(arg.responseShouldBeStatus400).
+			Then(arg.postIDShouldBeEmpty).
+			Run()
+	})
 }

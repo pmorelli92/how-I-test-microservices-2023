@@ -1,3 +1,5 @@
+//go:build accept
+
 package accept_test
 
 import (
@@ -10,6 +12,11 @@ import (
 
 func TestMain(m *testing.M) {
 	go app.Run()
-	time.Sleep(500 * time.Millisecond)
+	readinessProbe()
 	os.Exit(m.Run())
+}
+
+// readinessProbe is used to add required ready checks for service and dependencies
+func readinessProbe() {
+	time.Sleep(500 * time.Millisecond)
 }
