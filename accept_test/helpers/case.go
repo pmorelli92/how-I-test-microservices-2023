@@ -2,6 +2,9 @@ package helpers
 
 import (
 	"context"
+	"reflect"
+	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -40,18 +43,23 @@ func (c Case[TActual]) Then(fn func(context.Context, TActual) error) Case[TActua
 func (c Case[TActual]) Run() {
 	for _, g := range c.given {
 		if err := g(c.ctx); err != nil {
-			c.t.Fatalf("failed given with: %s", err.Error())
+			c.t.Fatalf("failed %s with: %s", getFunctionName(g), err.Error())
 		}
 	}
 
 	actual, err := c.when(c.ctx)
 	if err != nil {
-		c.t.Fatalf("failed when with: %s", err.Error())
+		c.t.Fatalf("failed %s with: %s", getFunctionName(c), err.Error())
 	}
 
 	for _, t := range c.then {
 		if err := t(c.ctx, actual); err != nil {
-			c.t.Fatalf("failed then with: %s", err.Error())
+			c.t.Fatalf("failed %s with: %s", getFunctionName(t), err.Error())
 		}
 	}
+}
+
+func getFunctionName(fn any) string {
+	str := strings.Split(runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name(), ".")
+	return strings.ReplaceAll(str[len(str)-1], "-fm", "")
 }
