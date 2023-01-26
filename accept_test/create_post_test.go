@@ -31,8 +31,9 @@ type testCreatePostResult struct {
 }
 
 func (t testCreatePost) userExists(ctx context.Context) error {
-	_, err := t.db.Exec(ctx, `INSERT INTO users(id) VALUES($1)`, t.userID)
-	return err
+	// _, err := t.db.Exec(ctx, `INSERT INTO users(id) VALUES($1)`, t.userID)
+	// return err
+	return fmt.Errorf("boom")
 }
 
 func (t testCreatePost) userDoesNotExists(ctx context.Context) error {
