@@ -11,7 +11,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/pmorelli92/how-i-test-microservices-2023/accept_test/helpers"
 	"github.com/pmorelli92/how-i-test-microservices-2023/app"
 )
 
@@ -141,7 +140,7 @@ func TestCreatePost(t *testing.T) {
 			content:     "some text without blacklist",
 		}
 
-		helpers.NewCase[testCreatePostResult](ctx, t).
+		NewCase[testCreatePostResult](ctx, t).
 			Given(arg.userExists).
 			When(arg.userCreatesPost).
 			Then(arg.responseShouldBeStatus201).
@@ -157,7 +156,7 @@ func TestCreatePost(t *testing.T) {
 			content:     "some text with foo",
 		}
 
-		helpers.NewCase[testCreatePostResult](ctx, t).
+		NewCase[testCreatePostResult](ctx, t).
 			Given(arg.userExists).
 			When(arg.userCreatesPost).
 			Then(arg.responseShouldBeStatus400).
@@ -173,7 +172,7 @@ func TestCreatePost(t *testing.T) {
 			content:     "some text for non existing user",
 		}
 
-		helpers.NewCase[testCreatePostResult](ctx, t).
+		NewCase[testCreatePostResult](ctx, t).
 			Given(arg.userDoesNotExists).
 			When(arg.userCreatesPost).
 			Then(arg.responseShouldBeStatus400).

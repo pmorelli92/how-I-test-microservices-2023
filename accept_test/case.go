@@ -1,4 +1,4 @@
-package helpers
+package accept_test
 
 import (
 	"context"
