@@ -133,7 +133,7 @@ func TestCreatePost(t *testing.T) {
 		t.Fatal("could not connect to database")
 	}
 
-	t.Run("Create post without blacklist terms", func(t *testing.T) {
+	t.Run("Create post without blacklisted terms", func(t *testing.T) {
 		arg := testCreatePost{
 			db:          db,
 			HTTPAddress: cfg.HTTPAddress,
@@ -149,7 +149,7 @@ func TestCreatePost(t *testing.T) {
 			Run()
 	})
 
-	t.Run("Create post with blacklist terms", func(t *testing.T) {
+	t.Run("Create post with blacklisted terms", func(t *testing.T) {
 		arg := testCreatePost{
 			db:          db,
 			HTTPAddress: cfg.HTTPAddress,

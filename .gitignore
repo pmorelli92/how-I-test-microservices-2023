@@ -1,2 +1,4 @@
 .vscode
 .DS_Store
+test.coverage.tmp
+test.coverage

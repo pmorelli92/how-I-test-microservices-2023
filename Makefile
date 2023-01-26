@@ -4,8 +4,9 @@ export
 dependencies:
 	docker compose up -d
 
-run:
-	go run cmd/main.go
+test:
+	go test -tags=accept --count=1 ./accept_test/... -v
 
-tests:
-	go test -tags=accept --count=1 ./...
+test/docker:
+	docker compose --file docker-compose-test.yaml up --build -d
+	docker attach accept_test
