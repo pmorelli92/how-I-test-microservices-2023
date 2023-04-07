@@ -26,7 +26,7 @@ func NewConfig() (Config, error) {
 }
 
 func (c Config) migrateDatabaseDSN() string {
-	return c.databaseConn("pgx")
+	return c.databaseConn("pgx5")
 }
 
 func (c Config) ConnectDatabaseDSN() string {
